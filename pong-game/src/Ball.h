@@ -5,8 +5,9 @@ namespace game {
 	public:
 		sf::Vector2f pos;
 		sf::RectangleShape shape;
-		float speedX = 200;
-		float speedY = -200;
+		float speed = 200;
+		float speedX = -speed;
+		float speedY = speed;
 		float speedModifier = 2.5f;
 	public:
 		Ball();

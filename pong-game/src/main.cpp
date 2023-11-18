@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 
 			// move bot paddle
 			if (botPaddle.pos.y + botPaddle.shape.getLocalBounds().height / 2.0f > ball.pos.y + ball.shape.getLocalBounds().height / 2
-				|| (ball.pos.y > HEIGHT / 2.0f + OFFSET_TOP && ball.speedY < 0)) {
+				|| (ball.pos.y < HEIGHT / 2.0f + OFFSET_TOP && ball.speedY < 0)) {
 				botPaddle.movingUp = true;
 				botPaddle.movingDown = false;
 			}
@@ -148,14 +148,11 @@ int main(int argc, char* argv[]) {
 				ball.speedY *= -1;
 			}
 			
-			if (ball.pos.x + ball.shape.getLocalBounds().width >= paddle.pos.x
-				&& ball.pos.y + ball.shape.getLocalBounds().height > paddle.pos.y
-				&& ball.pos.y < paddle.pos.y + paddle.shape.getLocalBounds().height) {
+			// paddle collision
+			if (ball.shape.getGlobalBounds().intersects(paddle.shape.getGlobalBounds())) {
 				ball.speedX *= -1;
 			}
-			else if (ball.pos.x <= botPaddle.pos.x + botPaddle.shape.getLocalBounds().width
-				&& ball.pos.y + ball.shape.getLocalBounds().height > botPaddle.pos.y
-				&& ball.pos.y < botPaddle.pos.y + botPaddle.shape.getLocalBounds().height) {
+			else if (ball.shape.getGlobalBounds().intersects(botPaddle.shape.getGlobalBounds())) {
 				ball.speedX *= -1;
 			}
 
@@ -163,6 +160,28 @@ int main(int argc, char* argv[]) {
 			paddle.update(dt);
 			botPaddle.update(dt);
 			ball.update(dt);
+			// fix ball stuck on paddle
+			if (ball.shape.getGlobalBounds().intersects(paddle.shape.getGlobalBounds()) 
+				&& ball.pos.x + ball.shape.getLocalBounds().width > paddle.pos.x) {
+				ball.setPosition(ball.pos.x - 1, ball.pos.y);
+				ball.speedX = -ball.speed;
+			}
+			else if (ball.shape.getGlobalBounds().intersects(botPaddle.shape.getGlobalBounds()) 
+				&& ball.pos.x < botPaddle.pos.x + botPaddle.shape.getLocalBounds().width) {
+				ball.setPosition(ball.pos.x + 1, ball.pos.y);
+				ball.speedX = ball.speed;
+			}
+
+			// fix ball stuck on wall
+			if (ball.pos.y <= OFFSET_TOP) {
+				ball.setPosition(ball.pos.x, OFFSET_TOP + 1);
+				ball.speedY = ball.speed;
+			}
+			else if (ball.pos.y + ball.shape.getGlobalBounds().height >= HEIGHT) {
+				ball.setPosition(ball.pos.x, HEIGHT - ball.shape.getGlobalBounds().height - 2);
+				ball.speedY = -ball.speed;
+			}
+
 		} // if !paused
 
 		// draw
