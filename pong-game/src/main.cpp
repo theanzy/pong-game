@@ -7,8 +7,6 @@
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
 
-bool rectsAreColliding(const sf::FloatRect& a, const sf::FloatRect& b);
-
 int main(int argc, char* argv[]) {
 	using namespace game;
 
@@ -20,13 +18,22 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int score = 0;
+	bool paused = false;
+	int playerScore = 0;
+	int botScore = 0;
 	sf::Text scoreText;
 	scoreText.setFont(font);
+	scoreText.setString(fmt::format("Bot: {} | Player: {}", botScore, playerScore));
 	scoreText.setFillColor(sf::Color::White);
-	scoreText.setString("Score: 0");
 	scoreText.setPosition(20, 20);
 	scoreText.setCharacterSize(28);
+
+
+	sf::Text pausedText;
+	pausedText.setFont(font);
+	pausedText.setString("");
+	pausedText.setFillColor(sf::Color::White);
+	pausedText.setCharacterSize(40);
 
 	// offset
 	const float OFFSET_TOP = 50;
@@ -54,71 +61,109 @@ int main(int argc, char* argv[]) {
 				window.close();
 			}
 		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
-			window.close();
-			continue;
-		}
+		if (paused) {
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
+				ball.setPosition(WIDTH / 2.0f - ball.shape.getLocalBounds().width / 2, HEIGHT / 2.0f + OFFSET_TOP - ball.shape.getLocalBounds().height / 2.0f);
+				paddle.setPosition(WIDTH - paddle.shape.getLocalBounds().width - OFFSET_X, HEIGHT / 2.0f + OFFSET_TOP - paddle.shape.getLocalBounds().height / 2.0f);
+				botPaddle.setPosition(OFFSET_X, HEIGHT / 2.0f + OFFSET_TOP - botPaddle.shape.getLocalBounds().height / 2.0f);
+				paused = false;
+				pausedText.setString("");
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			paddle.movingUp = true;
+			}
 		}
 		else {
-			paddle.movingUp = false;
-		}
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-			paddle.movingDown = true;
-		}
-		else {
-			paddle.movingDown = false;
-		}
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
+				window.close();
+				continue;
+			}
 
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+				paddle.movingUp = true;
+			}
+			else {
+				paddle.movingUp = false;
+			}
 
-		// update elements
-
-		// move bot paddle
-		if (botPaddle.pos.y + botPaddle.shape.getLocalBounds().height / 2.0f > ball.pos.y + ball.shape.getLocalBounds().height / 2) {
-			botPaddle.movingUp = true;
-			botPaddle.movingDown = false;
-		}
-		else {
-			botPaddle.movingUp = false;
-			botPaddle.movingDown = true;
-		}
-
-		if (botPaddle.pos.y <= OFFSET_TOP) {
-			paddle.movingUp = false;
-		}
-		else if (botPaddle.pos.y + paddle.shape.getLocalBounds().height >= HEIGHT) {
-			paddle.movingDown = false;
-		}
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+				paddle.movingDown = true;
+			}
+			else {
+				paddle.movingDown = false;
+			}
 
 
-		if (paddle.pos.y <= OFFSET_TOP) {
-			paddle.movingUp = false;
-		}
-		else if (paddle.pos.y + paddle.shape.getLocalBounds().height >= HEIGHT) {
-			paddle.movingDown = false;
-		}
+			// update elements
+			// check game over
+			if (ball.pos.x + ball.shape.getLocalBounds().width < botPaddle.pos.x
+				|| ball.pos.x > paddle.pos.x + paddle.shape.getLocalBounds().width) {
+				if (ball.pos.x < WIDTH / 2.0f) {
+					playerScore += 1;
+				}
+				else {
+					botScore += 1;
+				}
+				scoreText.setString(fmt::format("Bot: {} | Player: {}", botScore, playerScore));
 
-		// vertical bounds check
-		if (ball.pos.y + ball.shape.getLocalBounds().height >= HEIGHT) {
-			ball.speedY *= -1;
-		}
-		else if (ball.pos.y <= 0) {
-			ball.speedY *= -1;
-		}
-		else if (rectsAreColliding(paddle.shape.getGlobalBounds(), ball.shape.getGlobalBounds())) {
-			ball.speedX *= -1;
-		}
-		else if (rectsAreColliding(botPaddle.shape.getGlobalBounds(), ball.shape.getGlobalBounds())) {
-			ball.speedX *= -1;
-		}
+				// pause text
+				pausedText.setString("Enter to continue");
+				pausedText.setOrigin(pausedText.getLocalBounds().width / 2, pausedText.getLocalBounds().height / 2);
+				pausedText.setPosition(WIDTH / 2.0f, HEIGHT / 2.0f + OFFSET_TOP);
+				paused = true;
+			}
+			// limit player's paddle bounds
+			if (paddle.pos.y < OFFSET_TOP) {
+				paddle.movingUp = false;
+			}
+			else if (paddle.pos.y + paddle.shape.getLocalBounds().height > HEIGHT) {
+				paddle.movingDown = false;
+			}
+
+			// move bot paddle
+			if (botPaddle.pos.y + botPaddle.shape.getLocalBounds().height / 2.0f > ball.pos.y + ball.shape.getLocalBounds().height / 2
+				|| (ball.pos.y > HEIGHT / 2.0f + OFFSET_TOP && ball.speedY < 0)) {
+				botPaddle.movingUp = true;
+				botPaddle.movingDown = false;
+			}
+			else {
+				botPaddle.movingUp = false;
+				botPaddle.movingDown = true;
+			}
+
+			if (botPaddle.pos.y < OFFSET_TOP) {
+				botPaddle.movingUp = false;
+			}
+			else if (botPaddle.pos.y + botPaddle.shape.getLocalBounds().height >= HEIGHT) {
+				botPaddle.movingDown = false;
+			}
 
 
-		paddle.update(dt);
-		botPaddle.update(dt);
-		ball.update(dt);
+
+
+			// vertical bounds check
+			if (ball.pos.y + ball.shape.getLocalBounds().height >= HEIGHT) {
+				ball.speedY *= -1;
+			}
+			else if (ball.pos.y <= 0) {
+				ball.speedY *= -1;
+			}
+			
+			if (ball.pos.x + ball.shape.getLocalBounds().width >= paddle.pos.x
+				&& ball.pos.y + ball.shape.getLocalBounds().height > paddle.pos.y
+				&& ball.pos.y < paddle.pos.y + paddle.shape.getLocalBounds().height) {
+				ball.speedX *= -1;
+			}
+			else if (ball.pos.x <= botPaddle.pos.x + botPaddle.shape.getLocalBounds().width
+				&& ball.pos.y + ball.shape.getLocalBounds().height > botPaddle.pos.y
+				&& ball.pos.y < botPaddle.pos.y + botPaddle.shape.getLocalBounds().height) {
+				ball.speedX *= -1;
+			}
+
+
+			paddle.update(dt);
+			botPaddle.update(dt);
+			ball.update(dt);
+		} // if !paused
 
 		// draw
 		window.clear();
@@ -128,6 +173,7 @@ int main(int argc, char* argv[]) {
 		window.draw(paddle.shape);
 		window.draw(botPaddle.shape);
 		window.draw(ball.shape);
+		window.draw(pausedText);
 
 		window.display();
 
@@ -135,14 +181,3 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-bool rectsAreColliding(const sf::FloatRect& a, const sf::FloatRect& b) {
-	if (a.left + a.width < b.left
-		|| a.left > b.left + b.width
-		|| a.top + a.height < b.top
-		|| a.top > b.top + b.height
-		) {
-		return false;
-	}
-
-	return true;
-}
