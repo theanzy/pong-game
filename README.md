@@ -1,6 +1,6 @@
 # pong-game
-[/] paddles
-[/] bouncing calls
-[/] simple moving bot
-[/] scores
-[/] keep playing each rounds
+- [x] paddles
+- [x] bouncing calls
+- [x] simple moving bot
+- [x] scores
+- [x] keep playing each rounds
